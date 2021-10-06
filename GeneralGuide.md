@@ -1,6 +1,6 @@
 # Create django project
 
-## Virtual ENvironment
+## Virtual Environment
 
 ```
     virtualenv -v env
