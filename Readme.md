@@ -11,6 +11,7 @@ Do this outside the project directory
 ```
     pip3 install django # for django
     pip3 instal djangorestframework # for REST api
+    pip3 install django-rest-auth
 ```
 
 ## Start server
