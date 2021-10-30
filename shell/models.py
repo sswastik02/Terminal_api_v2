@@ -7,7 +7,7 @@ class Shell(models.Model):
     user=models.TextField(editable=False,default="Anonymous")
     command = models.CharField(max_length=100)
     response = models.TextField(editable=False)
-    isCompleted = models.BooleanField(default=False)
+    cwd = models.TextField(editable=False,default="/")
 
     def __str__(self):
         return self.command
