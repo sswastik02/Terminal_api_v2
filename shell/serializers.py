@@ -8,7 +8,9 @@ class ShellSerializer(serializers.ModelSerializer):
         model=Shell
         fields = ("id","user","command","response","cwd")
 
-    def formatdotdot(self,dir):
+    def formatdotdot(seld,dir):
+        while("/./" in dir):
+            dir=dir.replace("/./","/")
         while("/.." in dir):
             dotdot = dir.index('/..')
             if(dotdot == 0):
@@ -25,7 +27,83 @@ class ShellSerializer(serializers.ModelSerializer):
             if(dir == ''):
                 dir = '/'
                 break
+        dir=dir.replace("/.","")
+        if(dir == ''):
+            dir = '/'
         return dir
+
+    def argformat(self,command):
+        command = command.split(' ')
+        dirs = []
+        args = []
+        for i in command:
+            if "-" in i and i.index('-') == 0:
+                args.append(i)
+            else:
+                dirs.append(i)
+            
+        return dirs,args
+    # def mvchecks(self,obj):
+    #     obj.response = ""
+    #     obj.command = obj.command[3:]
+    #     dirs,args = self.argformat(obj.command)
+    #     if(len(dirs) <= 1):
+    #         obj.response = "mv: missing file operands " 
+    #         obj.save()
+    #         return obj
+    #     for dir in dirs:
+    #         while(dir[-1] == "/"):
+    #             dir = dir[:-1]
+    #         if(dir[0]!='/'):
+    #             dir = obj.cwd + "/" + dir
+    #         dir = self.formatdotdot(dir)
+    #         if("/"+obj.user not in dir or ("/" + obj.user in dir and dir.index("/"+obj.user) != 0)):
+    #             obj.response = "Permission Denied"
+    #             obj.save()
+    #             return obj
+    #         if(not os.path.isdir("UserShells"+ dir) and not os.path.isfile("UserShells"+ dir)):
+    #             obj.response = dir + " :No such directory or file"
+    #             obj.save()
+    #             return obj
+    #     obj.command = "mv "+ args.join(" ") + " " + dirs.join(' ')
+    #     process = subprocess.run(obj.command,shell=True,text=True,capture_output=True,cwd="UserShells"+obj.cwd)
+    #     obj.response = process.stdout if process.stderr == '' else process.stderr
+    #     obj.response = obj.response.replace(os.getcwd() + "/UserShells","")
+    #     obj.save() # this step is necessary to save the obj or during get it will not store correctly
+    #     return obj
+        
+        
+        
+            
+        
+    def cdchecks(self,obj):
+        obj.response = ""
+        dir = obj.command[3:]
+        while(dir[-1] == "/"):
+            dir = dir[:-1]
+        if(".." in dir and dir.index("..") == 0 and obj.cwd == "/" + obj.user):
+            obj.response = "Do not use .."
+            obj.save()
+            return obj
+            
+        if(dir[0] != '/'):
+            dir = obj.cwd + "/" + dir
+           
+        dir = self.formatdotdot(dir)
+        if("/"+obj.user not in dir or ("/" + obj.user in dir and dir.index("/"+obj.user) != 0)):
+            obj.response = "Permission Denied"
+            obj.save()
+            return obj
+            
+        if(not os.path.isdir("UserShells"+ dir)):
+            obj.response = dir + " :No such directory"
+            obj.save()
+            return obj
+            
+        obj.cwd=dir
+        obj.save()
+        return obj
+    
     def getcwd(self,obj):
         last_cwds = Shell.objects.all().filter(user=obj.user).exclude(id=obj.id)[::-1]
         if(len(last_cwds) > 0):
@@ -58,38 +136,10 @@ class ShellSerializer(serializers.ModelSerializer):
             obj.save()
             return obj
 
-        if("cd" in obj.command and obj.command.index("cd") == 0):
-            obj.response = ""
-            dir = obj.command[3:]
-            while(dir[-1] == "/"):
-                dir = dir[:-1]
-            if(".." in dir and dir.index("..") == 0 and obj.cwd == "/" + obj.user):
-                obj.response = "Do not use .."
-                obj.save()
-                return obj
-            
-            if(dir[0] != '/'):
-                dir = obj.cwd + "/" + dir
-            
-            dir = self.formatdotdot(dir)
-            if("/"+obj.user not in dir or ("/" + obj.user in dir and dir.index("/"+obj.user) != 0)):
-                obj.response = "Permission Denied"
-                obj.save()
-                return obj
-            
-            if(not os.path.isdir("UserShells"+ dir)):
-                obj.response = dir + " :No such directory"
-                obj.save()
-                return obj
-            
-            obj.cwd=dir
-            obj.save()
-            return obj
-
-        
-        if(len(Shell.objects.all().filter(user=obj.user).exclude(id=obj.id)[::-1]) > 0):
-            print(Shell.objects.all().filter(user=obj.user).exclude(id=obj.id)[::-1][0].cwd)
-        
+        if("cd" in obj.command and obj.command.index("cd ") == 0):
+            return self.cdchecks(obj)
+        if("mv" in obj.command and obj.command.index("mv ") == 0):
+            return self.mvchecks(obj)
         process = subprocess.run(obj.command,shell=True,text=True,capture_output=True,cwd="UserShells"+obj.cwd)
         obj.response = process.stdout if process.stderr == '' else process.stderr
         obj.response = obj.response.replace(os.getcwd() + "/UserShells","")
