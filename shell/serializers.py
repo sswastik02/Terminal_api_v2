@@ -138,8 +138,8 @@ class ShellSerializer(serializers.ModelSerializer):
 
         if("cd" in obj.command and obj.command.index("cd ") == 0):
             return self.cdchecks(obj)
-        if("mv" in obj.command and obj.command.index("mv ") == 0):
-            return self.mvchecks(obj)
+        # if("mv" in obj.command and obj.command.index("mv ") == 0):
+        #     return self.mvchecks(obj)
         process = subprocess.run(obj.command,shell=True,text=True,capture_output=True,cwd="UserShells"+obj.cwd)
         obj.response = process.stdout if process.stderr == '' else process.stderr
         obj.response = obj.response.replace(os.getcwd() + "/UserShells","")
